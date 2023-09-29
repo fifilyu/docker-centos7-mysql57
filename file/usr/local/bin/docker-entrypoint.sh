@@ -3,7 +3,7 @@
 /sbin/sshd
 
 rm -f /var/run/mysqld/mysqld.pid /var/lib/mysql/mysql.sock
-/usr/sbin/mysqld --daemonize --pid-file=/var/run/mysqld/mysqld.pid
+/usr/sbin/mysqld --daemonize --user=mysql --pid-file=/var/run/mysqld/mysqld.pid
 
 sleep 1
 
@@ -20,7 +20,6 @@ if [ ! -z "${PUBLIC_STR}" ]; then
             echo `date "+%Y-%m-%d %H:%M:%S"` > ${auth_lock_file}
         else
             echo "`date "+%Y-%m-%d %H:%M:%S"` [错误] 公钥添加失败"
-            exit 1
         fi
     fi
 fi
@@ -37,29 +36,37 @@ else
     MYSQL_ROOT_PASSWORD=$(pwgen -1 20)
     echo "`date "+%Y-%m-%d %H:%M:%S"` [信息] MySQL新密码："${MYSQL_ROOT_PASSWORD}
 
-    mysql -e "update mysql.user set plugin='mysql_native_password';"
-    mysql -e "flush privileges;"
-    mysql -e "alter user 'root'@'localhost' identified by '${MYSQL_ROOT_PASSWORD}';"
+    MYSQL_TMP_ROOT_PASSWORD=$(grep 'A temporary password' /var/log/mysqld.log | tail -n 1 | awk '{print $NF}')
+    mysqladmin -uroot -p"${MYSQL_TMP_ROOT_PASSWORD}" password ${MYSQL_ROOT_PASSWORD}
 
     if [ $? -eq 0 ]; then
         echo "`date "+%Y-%m-%d %H:%M:%S"` [信息] MySQL密码修改成功"
     else
         echo "`date "+%Y-%m-%d %H:%M:%S"` [错误] MySQL密码修改失败"
-        exit 1
     fi
 
-    mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e \
-        "CREATE USER 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;" 2>/dev/null
+    unbuffer expect -c "
+    spawn mysql_config_editor set --skip-warn --login-path=client --host=localhost --user=root --password
+    expect -nocase \"Enter password:\" {send \"${MYSQL_ROOT_PASSWORD}\n\"; interact}
+    "
+
+    mysql -e 'show databases;'
+
+    if [ $? -eq 0 ]; then
+        echo "`date "+%Y-%m-%d %H:%M:%S"` [信息] MySQL容器无密码登录设置成功"
+    else
+        echo "`date "+%Y-%m-%d %H:%M:%S"` [错误] MySQL容器无密码登录设置失败"
+    fi
+
+    mysql -e "CREATE USER 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;"
 
     if [ $? -eq 0 ]; then
         echo "`date "+%Y-%m-%d %H:%M:%S"` [信息] 设置MySQL远程登录成功"
+        # 密码和远程登录设置成功后锁定
+        echo `date "+%Y-%m-%d %H:%M:%S"` > ${mysql_lock_file}
     else
         echo "`date "+%Y-%m-%d %H:%M:%S"` [错误] 设置MySQL远程登录失败"
-        exit 1
     fi
-
-    # 密码和远程登录设置成功后锁定
-    echo `date "+%Y-%m-%d %H:%M:%S"` > ${mysql_lock_file}
 fi
 
 # 保持前台运行，不退出

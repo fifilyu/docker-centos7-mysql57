@@ -25,7 +25,6 @@ docker run -d \
     --env LANG=en_US.UTF-8 \
     --env TZ=Asia/Shanghai \
     -p 23306:3306 \
-    -v /data/mysql:/var/lib/mysql:rw \
     --name mysql_foo \
     fifilyu/centos7-mysql57:latest
 ```

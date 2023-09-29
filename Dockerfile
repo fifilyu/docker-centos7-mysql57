@@ -18,6 +18,8 @@ RUN ulimit -n 1024 && yum-config-manager --disable mysql80-community | egrep '(\
 RUN ulimit -n 1024 && yum --enablerepo=mysql57-community install -y mysql-community-server
 RUN mysqld --initialize
 RUN chown -R mysql /var/lib/mysql
+# For 自动修改密码
+RUN ulimit -n 1024 && yum install -y expect
 
 ####################
 # 清理
