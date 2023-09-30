@@ -36,4 +36,4 @@ ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 WORKDIR /root
 
-EXPOSE 22
+EXPOSE 22 3306
