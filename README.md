@@ -25,18 +25,18 @@ docker run -d \
     --env LANG=en_US.UTF-8 \
     --env TZ=Asia/Shanghai \
     -p 23306:3306 \
-    --name mysql_foo \
+    --name mysql57 \
     fifilyu/centos7-mysql57:latest
 ```
 
 * MySQL主机地址：`localhost`
 * MySQL主机端口：`23306`
 * MySQL用户名称：`root`
-* MySQL用户密码：(执行 `docker logs foobar` 命令查看默认密码)
+* MySQL用户密码：(执行 `docker logs mysql57` 命令查看默认密码)
 * MySQL本地数据目录：`/data/mysql`
 
 ### 测试MySQL连接
 
 ```bash
-mysql -h localhost -uroot -p默认密码 mysql -e 'select now();'
+mysql -h localhost -P23306 -uroot -p默认密码 mysql -e 'select now();'
 ```
